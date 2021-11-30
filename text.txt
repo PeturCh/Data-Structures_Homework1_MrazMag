@@ -1,0 +1,25 @@
+indice = 0;
+workers = 5, bananas = 25, schweppes = 70;
+
+arrivalTimeB 
+arrivalTimeS 
+
+reservedB = 0, reservedS = 0, sentForB = 0, sentForS = 0;
+
+clientDepMin = 146
+
+myClients
+200 10 10 1
+
+W 0 banana
+0 10 0 0
+W 46 schweppes
+D 60 banana
+1 60 35 0
+D 106 schweppes
+2 106 30 20
+3 200 10 10
+
+
+
+
