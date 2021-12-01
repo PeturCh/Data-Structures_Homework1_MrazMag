@@ -399,6 +399,15 @@ TEST_CASE("Clients arrive/depart in mixed order") {
 		REQUIRE(LastEvent().type == StoreEvent::ClientDepart);
 		REQUIRE(LastEvent().client.banana == 10);
 		REQUIRE(LastEvent().client.index == 1);
+		for (size_t i = 0; i < store.log.size(); i++)
+		{
+			if(store.log[i].type == StoreEvent::ClientDepart)
+			std::cout<<"cd "<<store.log[i].client.index<<std::endl;
+			if(store.log[i].type == StoreEvent::WorkerSend)
+			std::cout<<"ws\n";
+			else "wb\n";
+		}	
+		std::cout<<"LASTEVENT MIN 10 CLIENT INDEX: "<<LastEvent().client.index << std::endl;
 	}
 
 	SECTION("First client") {
