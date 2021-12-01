@@ -252,10 +252,64 @@ struct MyStore : Store
                 
                 if (clientDepTime <= minute)
                 {
-                    clientDeparture(cs[i], clientDepTime);
+                    Client curr = cs[i];
+                    for (size_t j = i + 1; j < clientsCount; j++)
+                    {
+                        if(cs[j].maxWaitTime + cs[j].arriveMinute <= clientDepTime)
+                        {
+                            int waitingClientDepMin = cs[j].maxWaitTime + cs[j].arriveMinute;
+                            bool hasDeparted = false;
+                            while(!arrivalTimeB.empty() && arrivalTimeB.front() <= waitingClientDepMin)//if there was banana delivery before he goes
+                            {
+                                int minAdded = addStock(ResourceType::banana);
+                                if(checkForEnoughStock(cs[j].banana, cs[j].schweppes))
+                                {
+                                    clientDeparture(cs[j], minAdded);
+                                    //actionHandler->onClientDepart(cs[j].index, minAdded, cs[j].banana, cs[j].schweppes);
+                                    std::cout<<"cd: "<<cs[j].index<<std::endl;
+                                    removeClient(cs[j]);
+                                    hasDeparted = true;
+                                    clientsCount--;
+                                    i--;
+                                    j--;
+                                }
+                            }
+                            if (hasDeparted) //if he only needed bananas and they have arrived
+                                continue;
+
+                            while(!arrivalTimeS.empty() && arrivalTimeS.front() <= waitingClientDepMin)// if there was schweppes delivery before he goes
+                            {
+                                int minAdded = addStock(ResourceType::schweppes);
+                                if(checkForEnoughStock(cs[j].banana, cs[j].schweppes))
+                                {
+                                    clientDeparture(cs[j], minAdded);
+                                    //actionHandler->onClientDepart(cs[j].index, minAdded, cs[j].banana, cs[j].schweppes);
+                                    std::cout<<"cd: "<<cs[j].index<<std::endl;
+                                    removeClient(cs[j]);
+                                    clientsCount--;
+                                    i--;
+                                    j--;
+                                    hasDeparted = true;
+                                }
+                            }
+
+                            if (hasDeparted) //if he has already departed;
+                                continue;
+
+                            clientDeparture(cs[j], waitingClientDepMin); //there were no deliveries he departs with all he can get
+                            //actionHandler->onClientDepart(cs[j].index, waitingClientDepMin, cs[j].banana, cs[j].schweppes);
+                            std::cout<<"cd: "<<cs[j].index<<std::endl;
+                            removeClient(cs[j]);
+                            clientsCount--;
+                            i--;
+                            j--;
+                        }
+                    }
+
+                    clientDeparture(curr, clientDepTime);
                     //actionHandler->onClientDepart(cs[i].index, clientDepTime, cs[i].banana, cs[i].schweppes);
-                    std::cout<<"cd: "<<cs[i].index<<std::endl;
-                    removeClient(cs[i]);
+                    std::cout<<"cd: "<<curr.index<<std::endl;
+                    removeClient(curr);
                     clientsCount--;
                     i--;
                     continue;
@@ -291,10 +345,10 @@ int main()
     arr[0] = c;
     arr[1] = c1;
     ms.addClients(arr, 2);
-    ms.advanceTo(0);
-
-    std::cout<<"test2\n";
-    ms.advanceTo(10);
+    //ms.advanceTo(0);
+//
+    //std::cout<<"test2\n";
+    //ms.advanceTo(10);
 
     std::cout<<"test3\n";
     ms.advanceTo(20);
