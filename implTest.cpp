@@ -137,6 +137,12 @@ struct MyStore : Store
 
     void clientDeparture(Client &c, int min)
     {   
+        if(c.hasReservedB)
+            reservedB -= c.banana;
+
+        if(c.hasReservedS)
+            reservedS -= c.schweppes;
+            
         if (c.banana >= bananas)
         {
             c.banana = bananas;
@@ -154,12 +160,6 @@ struct MyStore : Store
 
         else
             schweppes -= c.schweppes;
-
-        if(c.hasReservedB)
-            reservedB -= c.banana;
-
-        if(c.hasReservedS)
-            reservedS -= c.schweppes;
 
         //std::cout<<c.index<<" "<< min << " " << c.banana << " " << c.schweppes << std::endl;
     }
