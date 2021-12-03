@@ -1,15 +1,15 @@
 #include "interface.h"
-#include <iostream>
+#include "queue.h"
 #include <vector>
-#include <queue>
+#include <iostream>
 
 struct MyStore : Store 
 {
     int indice = 0;
     int workers = 0, bananas = 0, schweppes = 0, clientsCount = 0;
 
-    std::queue<int> arrivalTimeB;
-    std::queue<int> arrivalTimeS;
+    Queue<int> arrivalTimeB;
+    Queue<int> arrivalTimeS;
 
     int reservedB = 0, reservedS = 0, sentForB = 0, sentForS = 0;
 
@@ -34,19 +34,15 @@ struct MyStore : Store
         if(t == ResourceType::banana)
         {
             //std::cout<<"D " << arrivalTimeB.front() << " banana\n";
-            int arriveTime = arrivalTimeB.front();
             bananas += 100;
             sentForB--;
-            arrivalTimeB.pop();
-            return arriveTime; // u have to implement pop with return value;
+            return arrivalTimeB.pop();
         }
         
         //std::cout<<"D " << arrivalTimeS.front() << " schweppes\n";
-        int arriveTime = arrivalTimeS.front();
         schweppes += 100;
         sentForS--;
-        arrivalTimeS.pop();
-        return arriveTime;
+        return arrivalTimeS.pop();;
     }
 
     bool checkForDeliveries(const int &minute)
@@ -107,7 +103,7 @@ struct MyStore : Store
             sentForS++;
             c.hasReservedS = true;
             reservedS += c.schweppes;
-            arrivalTimeS.push(c.arriveMinute + 60);
+            arrivalTimeS.enqueue(c.arriveMinute + 60);
             actionHandler->onWorkerSend(c.arriveMinute, ResourceType::schweppes);
         }
         if (c.schweppes > schweppes && (workers - (sentForS + sentForB) > 0) && !c.hasReservedS)
@@ -124,7 +120,7 @@ struct MyStore : Store
             sentForB++;
             reservedB += c.banana;
             c.hasReservedB = true;
-            arrivalTimeB.push(c.arriveMinute + 60);
+            arrivalTimeB.enqueue(c.arriveMinute + 60);
             actionHandler->onWorkerSend(c.arriveMinute, ResourceType::banana);
         }
 
@@ -259,7 +255,6 @@ struct MyStore : Store
                                 {
                                     clientDeparture(cs[j], minAdded);
                                     actionHandler->onClientDepart(cs[j].index, minAdded, cs[j].banana, cs[j].schweppes);
-                                    std::cout<<"cd: "<<cs[j].index<<std::endl;
                                     removeClient(cs[j]);
                                     hasDeparted = true;
                                     clientsCount--;
@@ -277,7 +272,6 @@ struct MyStore : Store
                                 {
                                     clientDeparture(cs[j], minAdded);
                                     actionHandler->onClientDepart(cs[j].index, minAdded, cs[j].banana, cs[j].schweppes);
-                                    std::cout<<"cd: "<<cs[j].index<<std::endl;
                                     removeClient(cs[j]);
                                     clientsCount--;
                                     i--;
@@ -291,7 +285,6 @@ struct MyStore : Store
 
                             clientDeparture(cs[j], waitingClientDepMin); //there were no deliveries he departs with all he can get
                             actionHandler->onClientDepart(cs[j].index, waitingClientDepMin, cs[j].banana, cs[j].schweppes);
-                            std::cout<<"cd: "<<cs[j].index<<std::endl;
                             removeClient(cs[j]);
                             clientsCount--;
                             i--;
