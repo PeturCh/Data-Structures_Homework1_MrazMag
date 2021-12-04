@@ -131,6 +131,29 @@ struct MyStore : Store
         }
     }
 
+    bool checkWaitingClients(Client &c, const size_t &clientDepMin, int &currMin)
+    {
+        int waitingClientDepMin = c.maxWaitTime + c.arriveMinute;
+        if(waitingClientDepMin <= clientDepMin && waitingClientDepMin <= currMin)
+        {
+            while(!arrivalTimeB.empty() && arrivalTimeB.front() <= waitingClientDepMin)//if there was banana delivery before he goes
+            {
+                int minAdded = addStock(ResourceType::banana);
+                if(checkForEnoughStock(c.banana, c.schweppes))
+                    return true;
+            }
+
+            while(!arrivalTimeS.empty() && arrivalTimeS.front() <= waitingClientDepMin)// if there was schweppes delivery before he goes
+            {
+                int minAdded = addStock(ResourceType::schweppes);
+                if(checkForEnoughStock(c.banana, c.schweppes))
+                    return true;
+            }
+            return true; //there were no deliveries he departs with all he can get
+        }
+        else return false;
+    }
+
     void clientDeparture(Client &c, int min)
     {   
         if(c.hasReservedB)
@@ -157,6 +180,9 @@ struct MyStore : Store
         else
             schweppes -= c.schweppes;
 
+        actionHandler->onClientDepart(c.index, min, c.banana, c.schweppes);
+        removeClient(c);
+        clientsCount--;
         //std::cout<<c.index<<" "<< min << " " << c.banana << " " << c.schweppes << std::endl;
     }
 
@@ -167,51 +193,11 @@ struct MyStore : Store
             int clientDepTime = cs[i].arriveMinute + cs[i].maxWaitTime;
             for (int j = 0; j < i; j++) //going threw the waiting clients
             {
-                int waitingClientDepMin = cs[j].arriveMinute + cs[j].maxWaitTime;
-                if (waitingClientDepMin <= cs[i].arriveMinute && waitingClientDepMin <= minute) //if someone has to go before the arrival of the new client
+                if(checkWaitingClients(cs[j], clientDepTime, minute))
                 {
-                    bool hasDeparted = false;
-                    while(!arrivalTimeB.empty() && arrivalTimeB.front() <= waitingClientDepMin)//if there was banana delivery before he goes
-                    {
-                        int minAdded = addStock(ResourceType::banana);
-                        if(checkForEnoughStock(cs[j].banana, cs[j].schweppes))
-                        {
-                            clientDeparture(cs[j], minAdded);
-                            actionHandler->onClientDepart(cs[j].index, minAdded, cs[j].banana, cs[j].schweppes);
-                            removeClient(cs[j]);
-                            hasDeparted = true;
-                            clientsCount--;
-                            i--;
-                            j--;
-                        }
-                    }
-                    if (hasDeparted) //if he only needed bananas and they have arrived
-                        continue;
-                    
-                    while(!arrivalTimeS.empty() && arrivalTimeS.front() <= waitingClientDepMin)// if there was schweppes delivery before he goes
-                    {
-                        int minAdded = addStock(ResourceType::schweppes);
-                        if(checkForEnoughStock(cs[j].banana, cs[j].schweppes))
-                        {
-                            clientDeparture(cs[j], minAdded);
-                            actionHandler->onClientDepart(cs[j].index, minAdded, cs[j].banana, cs[j].schweppes);
-                            removeClient(cs[j]);
-                            clientsCount--;
-                            i--;
-                            j--;
-                            hasDeparted = true;
-                        }
-                    }
-
-                    if (hasDeparted) //if he has already departed;
-                        continue;
-
-                    clientDeparture(cs[j], waitingClientDepMin); //there were no deliveries he departs with all he can get
-                    actionHandler->onClientDepart(cs[j].index, waitingClientDepMin, cs[j].banana, cs[j].schweppes);
-                    removeClient(cs[j]);
-                    clientsCount--;
-                    i--;
-                    j--;
+                    clientDeparture(cs[j], clientDepTime);
+                    --i;
+                    --j;
                 }
             }
 
@@ -222,9 +208,6 @@ struct MyStore : Store
                 if ((cs[i].isWaiting && clientDepTime <= minute) || checkForEnoughStock(cs[i].banana, cs[i].schweppes))
                 {
                     clientDeparture(cs[i], cs[i].arriveMinute);
-                    actionHandler->onClientDepart(cs[i].index, cs[i].arriveMinute, cs[i].banana, cs[i].schweppes);
-                    removeClient(cs[i]);
-                    clientsCount--;
                     i--;
                     continue;
                 }
@@ -244,57 +227,14 @@ struct MyStore : Store
                     Client curr = cs[i];
                     for (size_t j = i + 1; j < clientsCount; j++)
                     {
-                        if(cs[j].maxWaitTime + cs[j].arriveMinute <= clientDepTime)
+                        if(checkWaitingClients(cs[j], clientDepTime, minute))
                         {
-                            int waitingClientDepMin = cs[j].maxWaitTime + cs[j].arriveMinute;
-                            bool hasDeparted = false;
-                            while(!arrivalTimeB.empty() && arrivalTimeB.front() <= waitingClientDepMin)//if there was banana delivery before he goes
-                            {
-                                int minAdded = addStock(ResourceType::banana);
-                                if(checkForEnoughStock(cs[j].banana, cs[j].schweppes))
-                                {
-                                    clientDeparture(cs[j], minAdded);
-                                    actionHandler->onClientDepart(cs[j].index, minAdded, cs[j].banana, cs[j].schweppes);
-                                    removeClient(cs[j]);
-                                    hasDeparted = true;
-                                    clientsCount--;
-                                    i--;
-                                    j--;
-                                }
-                            }
-                            if (hasDeparted) //if he only needed bananas and they have arrived
-                                continue;
-
-                            while(!arrivalTimeS.empty() && arrivalTimeS.front() <= waitingClientDepMin)// if there was schweppes delivery before he goes
-                            {
-                                int minAdded = addStock(ResourceType::schweppes);
-                                if(checkForEnoughStock(cs[j].banana, cs[j].schweppes))
-                                {
-                                    clientDeparture(cs[j], minAdded);
-                                    actionHandler->onClientDepart(cs[j].index, minAdded, cs[j].banana, cs[j].schweppes);
-                                    removeClient(cs[j]);
-                                    clientsCount--;
-                                    i--;
-                                    j--;
-                                    hasDeparted = true;
-                                }
-                            }
-
-                            if (hasDeparted) //if he has already departed;
-                                continue;
-
-                            clientDeparture(cs[j], waitingClientDepMin); //there were no deliveries he departs with all he can get
-                            actionHandler->onClientDepart(cs[j].index, waitingClientDepMin, cs[j].banana, cs[j].schweppes);
-                            removeClient(cs[j]);
-                            clientsCount--;
-                            i--;
-                            j--;
+                            clientDeparture(cs[j], clientDepTime);
+                            --i;
+                            --j;
                         }
                     }
                     clientDeparture(curr, clientDepTime);
-                    actionHandler->onClientDepart(curr.index, clientDepTime, curr.banana, curr.schweppes);
-                    removeClient(curr);
-                    clientsCount--;
                     i--;
                     continue;
                 }
