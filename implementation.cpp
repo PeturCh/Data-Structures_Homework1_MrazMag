@@ -3,17 +3,38 @@
 #include <vector>
 #include <iostream>
 
+struct MyClient : Client
+{
+    int arriveMinute; ///< The time at which MyClient arrives
+	int banana; ///< Amount of bananas the MyClient wants to take
+	int schweppes; ///< Amount of schweppes the MyClient wants to take
+	int maxWaitTime; ///< The max amount of time the MyClient will wait before he departs
+    int index;
+	bool hasReservedB = false;
+	bool hasReservedS = false;
+	bool isWaiting = false;
+
+	MyClient(int arrMin, int ban, int sch, int maxWait, int in = 0) : arriveMinute(arrMin), banana(ban), schweppes(sch), maxWaitTime(maxWait)
+	{
+		index = in;
+	}
+
+	MyClient(){}
+};
+
 struct MyStore : Store 
 {
+    bool isConsole = false;
+    MyStore(bool _isConsole = false) {isConsole = _isConsole;}
     int indice = 0;
-    int workers = 0, bananas = 0, schweppes = 0, clientsCount = 0;
+    int workers = 0, bananas = 0, schweppes = 0, MyClientsCount = 0;
 
     Queue<int> arrivalTimeB;
     Queue<int> arrivalTimeS;
 
     int reservedB = 0, reservedS = 0, sentForB = 0, sentForS = 0;
 
-    std::vector<Client> cs;
+    std::vector<MyClient> cs;
 
 	ActionHandler *actionHandler = nullptr;
 
@@ -33,13 +54,17 @@ struct MyStore : Store
     {
         if(t == ResourceType::banana)
         {
-            //std::cout<<"D " << arrivalTimeB.front() << " banana\n";
+            if(isConsole)
+                std::cout<<"D " << arrivalTimeB.front() << " banana\n";
+
             bananas += 100;
             sentForB--;
             return arrivalTimeB.pop();
         }
         
-        //std::cout<<"D " << arrivalTimeS.front() << " schweppes\n";
+        if(isConsole)
+            std::cout<<"D " << arrivalTimeS.front() << " schweppes\n";
+
         schweppes += 100;
         sentForS--;
         return arrivalTimeS.pop();;
@@ -50,14 +75,18 @@ struct MyStore : Store
         bool hasDelivery = false;
         while(!arrivalTimeB.empty() && arrivalTimeB.front() <= minute)
         {
-            actionHandler->onWorkerBack(arrivalTimeB.front(), ResourceType::banana);
+            if(!isConsole)
+                actionHandler->onWorkerBack(arrivalTimeB.front(), ResourceType::banana);
+
             addStock(ResourceType::banana);
             hasDelivery = true;
         }
         
         while(!arrivalTimeS.empty() && arrivalTimeS.front() <= minute)
         {
-            actionHandler->onWorkerBack(arrivalTimeS.front(), ResourceType::schweppes);
+            if(!isConsole)
+                actionHandler->onWorkerBack(arrivalTimeS.front(), ResourceType::schweppes);
+
             addStock(ResourceType::schweppes);
             hasDelivery = true;
         }
@@ -66,10 +95,10 @@ struct MyStore : Store
 
 	void addClients(const Client *clients, int count) override 
     {
-        clientsCount = count;
+        MyClientsCount = count;
 		for (int i = 0; i < count; i++)
         {
-            Client c{clients[i].arriveMinute, clients[i].banana, clients[i].schweppes, clients[i].maxWaitTime, indice++};
+            MyClient c{clients[i].arriveMinute, clients[i].banana, clients[i].schweppes, clients[i].maxWaitTime, indice++};
             cs.push_back(c);
         }
 	}
@@ -86,7 +115,7 @@ struct MyStore : Store
         return hasS && hasB;
     }
 
-    void removeClient(Client &c)
+    void removeMyClient(MyClient &c)
     {
         for (size_t i = 0; i < cs.size(); i++)
             if (cs[i].index == c.index)
@@ -96,7 +125,7 @@ struct MyStore : Store
             }
     }
 
-    void tryOrderSchweppes(Client &c, int &minute)
+    void tryOrderSchweppes(MyClient &c, int &minute)
     {
         while(c.schweppes > schweppes + (sentForS * 100 - reservedS) && workers - (sentForS + sentForB) > 0 && !c.isWaiting && !c.hasReservedS)
         {
@@ -104,7 +133,10 @@ struct MyStore : Store
             c.hasReservedS = true;
             reservedS += c.schweppes;
             arrivalTimeS.enqueue(c.arriveMinute + 60);
-            actionHandler->onWorkerSend(c.arriveMinute, ResourceType::schweppes);
+            if(isConsole)
+                std::cout<<"W " << c.arriveMinute << " schweppes\n";
+            else
+                actionHandler->onWorkerSend(c.arriveMinute, ResourceType::schweppes);
         }
         if (c.schweppes > schweppes && (workers - (sentForS + sentForB) > 0) && !c.hasReservedS)
         {
@@ -113,7 +145,7 @@ struct MyStore : Store
         }
     }
 
-    void tryOrderBanana(Client &c, int minute)
+    void tryOrderBanana(MyClient &c, int minute)
     {
         while(c.banana > bananas + (sentForB * 100 - reservedB) && workers - (sentForS + sentForB) > 0 && !c.isWaiting && !c.hasReservedB)
         {
@@ -121,7 +153,10 @@ struct MyStore : Store
             reservedB += c.banana;
             c.hasReservedB = true;
             arrivalTimeB.enqueue(c.arriveMinute + 60);
-            actionHandler->onWorkerSend(c.arriveMinute, ResourceType::banana);
+            if(isConsole)
+                std::cout<<"W " << c.arriveMinute << "banana\n";
+            else
+                actionHandler->onWorkerSend(c.arriveMinute, ResourceType::banana);
         }
 
         if (c.banana > bananas && workers - (sentForS + sentForB) > 0 && !c.hasReservedB)
@@ -131,30 +166,30 @@ struct MyStore : Store
         }
     }
 
-    bool checkWaitingClients(Client &c, const size_t &clientDepMin, int &currMin)
+    int checkWaitingMyClients(MyClient &c, const size_t &MyClientDepMin, int &currMin)
     {
-        int waitingClientDepMin = c.maxWaitTime + c.arriveMinute;
-        if(waitingClientDepMin <= clientDepMin && waitingClientDepMin <= currMin)
+        int waitingMyClientDepMin = c.maxWaitTime + c.arriveMinute;
+        if(waitingMyClientDepMin <= MyClientDepMin && waitingMyClientDepMin <= currMin)
         {
-            while(!arrivalTimeB.empty() && arrivalTimeB.front() <= waitingClientDepMin)//if there was banana delivery before he goes
+            while(!arrivalTimeB.empty() && arrivalTimeB.front() <= waitingMyClientDepMin)//if there was banana delivery before he goes
             {
                 int minAdded = addStock(ResourceType::banana);
                 if(checkForEnoughStock(c.banana, c.schweppes))
-                    return true;
+                    return minAdded;
             }
 
-            while(!arrivalTimeS.empty() && arrivalTimeS.front() <= waitingClientDepMin)// if there was schweppes delivery before he goes
+            while(!arrivalTimeS.empty() && arrivalTimeS.front() <= waitingMyClientDepMin)// if there was schweppes delivery before he goes
             {
                 int minAdded = addStock(ResourceType::schweppes);
                 if(checkForEnoughStock(c.banana, c.schweppes))
-                    return true;
+                    return minAdded;
             }
-            return true; //there were no deliveries he departs with all he can get
+            return waitingMyClientDepMin; //there were no deliveries he departs with all he can get
         }
-        else return false;
+        else return -1;
     }
 
-    void clientDeparture(Client &c, int min)
+    void MyClientDeparture(MyClient &c, int min)
     {   
         if(c.hasReservedB)
             reservedB -= c.banana;
@@ -180,34 +215,37 @@ struct MyStore : Store
         else
             schweppes -= c.schweppes;
 
-        actionHandler->onClientDepart(c.index, min, c.banana, c.schweppes);
-        removeClient(c);
-        clientsCount--;
-        //std::cout<<c.index<<" "<< min << " " << c.banana << " " << c.schweppes << std::endl;
+        if(isConsole)
+                std::cout<<c.index<<" "<< min << " " << c.banana << " " << c.schweppes << std::endl;
+            else
+                actionHandler->onClientDepart(c.index, min, c.banana, c.schweppes);
+        removeMyClient(c);
+        MyClientsCount--;
+        
     }
 
 	void advanceTo(int minute) override  
     {
-		for (int i = 0; i < clientsCount && !cs.empty(); i++)
+		for (int i = 0; i < MyClientsCount && !cs.empty(); i++)
         {   
-            int clientDepTime = cs[i].arriveMinute + cs[i].maxWaitTime;
-            for (int j = 0; j < i; j++) //going threw the waiting clients
+            int MyClientDepTime = cs[i].arriveMinute + cs[i].maxWaitTime;
+            for (int j = 0; j < i; j++) //going threw the waiting MyClients
             {
-                if(checkWaitingClients(cs[j], clientDepTime, minute))
+                if(checkWaitingMyClients(cs[j], MyClientDepTime, minute) != -1)
                 {
-                    clientDeparture(cs[j], clientDepTime);
+                    MyClientDeparture(cs[j], MyClientDepTime);
                     --i;
                     --j;
                 }
             }
 
-            if(cs[i].arriveMinute <= minute) //check if the client has arrived until the given min
+            if(cs[i].arriveMinute <= minute) //check if the MyClient has arrived until the given min
             {
                 checkForDeliveries(cs[i].arriveMinute); //check for deliveries before the arrival
 
-                if ((cs[i].isWaiting && clientDepTime <= minute) || checkForEnoughStock(cs[i].banana, cs[i].schweppes))
+                if ((cs[i].isWaiting && MyClientDepTime <= minute) || checkForEnoughStock(cs[i].banana, cs[i].schweppes))
                 {
-                    clientDeparture(cs[i], cs[i].arriveMinute);
+                    MyClientDeparture(cs[i], cs[i].arriveMinute);
                     i--;
                     continue;
                 }
@@ -222,19 +260,23 @@ struct MyStore : Store
                 tryOrderBanana(cs[i], minute);
                 tryOrderSchweppes(cs[i], minute);
 
-                if (clientDepTime <= minute)
+                if (MyClientDepTime <= minute)
                 {
-                    Client curr = cs[i];
-                    for (size_t j = i + 1; j < clientsCount; j++)
+                    MyClient curr = cs[i];
+                    for (size_t j = i + 1; j < MyClientsCount; j++)
                     {
-                        if(checkWaitingClients(cs[j], clientDepTime, minute))
+                        if(checkWaitingMyClients(cs[j], MyClientDepTime, minute) != -1)
                         {
-                            clientDeparture(cs[j], clientDepTime);
+                            MyClientDeparture(cs[j], MyClientDepTime);
                             --i;
                             --j;
                         }
                     }
-                    clientDeparture(curr, clientDepTime);
+                    //int enoughStockMin = checkWaitingMyClients(cs[i], MyClientDepTime, minute);
+                    //if(enoughStockMin != -1)
+                    //    MyClientDeparture(curr, enoughStockMin);
+                    //else MyClientDeparture(curr, MyClientDepTime);
+                    MyClientDeparture(curr, MyClientDepTime);
                     i--;
                     continue;
                 }

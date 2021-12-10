@@ -35,17 +35,6 @@ struct Client {
 	int banana; ///< Amount of bananas the client wants to take
 	int schweppes; ///< Amount of schweppes the client wants to take
 	int maxWaitTime; ///< The max amount of time the client will wait before he departs
-	int index;
-	bool hasReservedB = false;
-	bool hasReservedS = false;
-	bool isWaiting = false;
-
-	Client(int arrMin, int ban, int sch, int maxWait, int in = 0) : arriveMinute(arrMin), banana(ban), schweppes(sch), maxWaitTime(maxWait)
-	{
-		index = in;
-	}
-
-	Client(){}
 };
 
 /// The interface that your solution needs to implement
