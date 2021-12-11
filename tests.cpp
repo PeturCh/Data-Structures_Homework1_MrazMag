@@ -2,6 +2,7 @@
 
 #include "implementation.hpp"
 #include "catch.hpp"
+#include "queue.h"
 
 #include <vector>
 
@@ -409,5 +410,68 @@ TEST_CASE("Clients arrive/depart in mixed order") {
 		REQUIRE(LastEvent().type == StoreEvent::ClientDepart);
 		REQUIRE(LastEvent().client.banana == 0);
 		REQUIRE(LastEvent().client.index == 0);
+	}
+}
+
+//Test for my Queue
+TEST_CASE("Adding elements to queue") {
+	Queue<int> ints;
+
+	SECTION("No elements") {
+		
+		INFO("Should be empty");
+		REQUIRE(ints.empty() == true);
+	}
+
+	ints.enqueue(5);
+	ints.enqueue(6);
+	ints.enqueue(4);
+	SECTION("Enqueue some elements") {
+		
+		INFO("Should not be empty");
+		REQUIRE(ints.empty() == false);
+		INFO("The size must be increased");
+		REQUIRE(ints.get_size() == 3);
+		INFO("The front must be the first added");
+		REQUIRE(ints.front() == 5);
+	}
+
+	ints.dequeue();
+	SECTION("Dequeue some elements") {
+
+		REQUIRE(ints.empty() == false);
+		
+		INFO("The front should change");
+		REQUIRE(ints.front() == 6);
+
+		INFO("Should not be empty");
+		REQUIRE(ints.empty() == false);
+
+		INFO("The size must be decreased");
+		REQUIRE(ints.get_size() == 2);
+	}
+
+	int lastEl = ints.pop();
+	SECTION("Pop some elements") {
+		REQUIRE(lastEl == 6);
+		
+		INFO("The front should change");
+		REQUIRE(ints.front() == 4);
+
+		INFO("Should not be empty");
+		REQUIRE(ints.empty() == false);
+
+		INFO("The size must be decreased");
+		REQUIRE(ints.get_size() == 1);
+	}
+
+	ints.dequeue();
+	SECTION("Dequeue last element") {
+
+		INFO("Should be empty");
+		REQUIRE(ints.empty() == true);
+
+		INFO("The size must be decreased");
+		REQUIRE(ints.get_size() == 0);
 	}
 }

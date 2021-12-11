@@ -1,9 +1,11 @@
 #pragma once
+#include <iostream>
+#include <exception>
 
 template <typename T>
-inline bool Queue<T>::empty()
+inline bool Queue<T>::empty() const
 {
-    return head == nullptr;
+    return size == 0;
 }
 
 template <typename T>
@@ -22,6 +24,7 @@ inline Queue<T>& Queue<T>::operator=(Queue<T> other)
 {
     swap(head, other.head);
     swap(tail, other.tail);
+    size = other.size;
 }
 
 template<typename T>
@@ -40,15 +43,26 @@ inline Queue<T>::~Queue()
 template <typename T>
 inline void Queue<T>::enqueue(const T &el)
 {
-    head = new Node<T>{el, head};
-    size++;
-    if(size == 1)
+    if(empty())
+    {
+        head = new Node<T>{el, nullptr};
         tail = head;
+        size++;
+        return;
+    }
+
+    tail->next = new Node<T>{el, nullptr};
+    tail = tail->next;
+    size++;
 }
 
 template <typename T>
 inline void Queue<T>::dequeue()
 {
+    if(empty())
+    {
+        throw std::out_of_range("Cannot dequeue: The queue is empty!\n");
+    }
     Node<T> *toDel = head;
     head = head->next;
     delete toDel;
@@ -64,6 +78,10 @@ inline const size_t& Queue<T>::get_size() const
 template <typename T>
 inline T Queue<T>::pop()
 {
+    if(empty())
+    {
+        throw std::out_of_range("Cannot pop: The queue is empty!\n");
+    }
     Node<T> popped = *head;
     dequeue();
     return popped.data;
@@ -72,5 +90,9 @@ inline T Queue<T>::pop()
 template <typename T>
 inline const T& Queue<T>::front() const
 {
+    if(empty())
+    {
+        throw std::invalid_argument("Cannot take front: The queue is empty!\n");
+    }
     return head->data;
 }

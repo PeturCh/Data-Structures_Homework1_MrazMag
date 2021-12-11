@@ -29,7 +29,7 @@ class Queue
 
     ~Queue();
 
-    bool empty();
+    bool empty() const;
 
     void enqueue(const T&);
 
