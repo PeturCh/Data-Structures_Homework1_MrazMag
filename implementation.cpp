@@ -115,7 +115,7 @@ struct MyStore : Store
         return hasS && hasB;
     }
 
-    void removeMyClient(MyClient &c)
+    void removeClient(MyClient &c)
     {
         for (size_t i = 0; i < cs.size(); i++)
             if (cs[i].index == c.index)
@@ -154,7 +154,7 @@ struct MyStore : Store
             c.hasReservedB = true;
             arrivalTimeB.enqueue(c.arriveMinute + 60);
             if(isConsole)
-                std::cout<<"W " << c.arriveMinute << "banana\n";
+                std::cout<<"W " << c.arriveMinute << " banana\n";
             else
                 actionHandler->onWorkerSend(c.arriveMinute, ResourceType::banana);
         }
@@ -166,7 +166,7 @@ struct MyStore : Store
         }
     }
 
-    int checkWaitingMyClients(MyClient &c, const size_t &MyClientDepMin, int &currMin)
+    int checkWaitingClients(MyClient &c, const size_t &MyClientDepMin, int &currMin)
     {
         int waitingMyClientDepMin = c.maxWaitTime + c.arriveMinute;
         if(waitingMyClientDepMin <= MyClientDepMin && waitingMyClientDepMin <= currMin)
@@ -219,7 +219,7 @@ struct MyStore : Store
                 std::cout<<c.index<<" "<< min << " " << c.banana << " " << c.schweppes << std::endl;
             else
                 actionHandler->onClientDepart(c.index, min, c.banana, c.schweppes);
-        removeMyClient(c);
+        removeClient(c);
         MyClientsCount--;
         
     }
@@ -231,7 +231,7 @@ struct MyStore : Store
             int MyClientDepTime = cs[i].arriveMinute + cs[i].maxWaitTime;
             for (int j = 0; j < i; j++) //going threw the waiting MyClients
             {
-                if(checkWaitingMyClients(cs[j], MyClientDepTime, minute) != -1)
+                if(checkWaitingClients(cs[j], MyClientDepTime, minute) != -1)
                 {
                     MyClientDeparture(cs[j], MyClientDepTime);
                     --i;
@@ -256,27 +256,72 @@ struct MyStore : Store
                         tryOrderBanana(cs[i], minute);
                             else tryOrderSchweppes(cs[i], minute);
                 }
-
+   
                 tryOrderBanana(cs[i], minute);
                 tryOrderSchweppes(cs[i], minute);
+                cs[i].isWaiting = true;
 
                 if (MyClientDepTime <= minute)
                 {
                     MyClient curr = cs[i];
                     for (size_t j = i + 1; j < MyClientsCount; j++)
                     {
-                        if(checkWaitingMyClients(cs[j], MyClientDepTime, minute) != -1)
+                        if(checkWaitingClients(cs[j], MyClientDepTime, minute) != -1)
                         {
                             MyClientDeparture(cs[j], MyClientDepTime);
                             --i;
                             --j;
                         }
                     }
-                    //int enoughStockMin = checkWaitingMyClients(cs[i], MyClientDepTime, minute);
+                    //int enoughStockMin = checkWaitingClients(cs[i], MyClientDepTime, minute);
                     //if(enoughStockMin != -1)
                     //    MyClientDeparture(curr, enoughStockMin);
                     //else MyClientDeparture(curr, MyClientDepTime);
-                    MyClientDeparture(curr, MyClientDepTime);
+                    
+                    for (size_t j = i + 1; j < MyClientsCount; j++)
+                    {
+                        if(cs[j].arriveMinute < MyClientDepTime)
+                        {
+                            if(checkForEnoughStock(cs[j].banana, cs[j].schweppes))
+                                MyClientDeparture(cs[j], cs[j].arriveMinute);
+                            else if(!cs[j].isWaiting)
+                            {
+                                tryOrderBanana(cs[j],minute);
+                                tryOrderSchweppes(cs[j], minute);
+                            }
+                        }
+                    }
+                    bool hasDeparted = false;
+
+                    while(!arrivalTimeB.empty() && arrivalTimeB.front() <= MyClientDepTime)
+                    {
+                        int minuteAdded = addStock(ResourceType::banana);
+                        if(!isConsole)
+                            actionHandler->onWorkerBack(minuteAdded, ResourceType::banana);
+                        if(checkForEnoughStock(curr.banana, curr.schweppes))
+                        {
+                            MyClientDeparture(curr, minuteAdded);
+                            hasDeparted = true;
+                            break;
+                        }
+                    }
+
+                    while(!arrivalTimeS.empty() && arrivalTimeS.front() < MyClientDepTime)
+                    {
+                        int minuteAdded = addStock(ResourceType::schweppes);
+                        if(!isConsole)
+                            actionHandler->onWorkerBack(minuteAdded, ResourceType::schweppes);
+                        if(checkForEnoughStock(curr.banana, curr.schweppes))
+                        {
+                            MyClientDeparture(curr, minuteAdded);
+                            hasDeparted = true;
+                            break;
+                        }
+                    }
+                    
+                    if(!hasDeparted)
+                        MyClientDeparture(curr, MyClientDepTime);
+
                     i--;
                     continue;
                 }
