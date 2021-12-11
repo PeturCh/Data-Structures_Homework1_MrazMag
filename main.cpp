@@ -1,11 +1,14 @@
 #include <iostream>
-#include "implementation.cpp"
+#include "implementation.hpp"
 
 int main()
 {
     MyStore ms(true);
     int workers, clientsCount, arrivalTime, bananas, schweppes, waitingTime;
-    std::cin >> workers >> clientsCount;
+    std::cout << "Input workers count: ";
+    std::cin >> workers;
+    std::cout << "Input clients count: ";
+    std::cin >> clientsCount;
     Client *clients = new Client[clientsCount];
     ms.init(workers, 0, 0);
     

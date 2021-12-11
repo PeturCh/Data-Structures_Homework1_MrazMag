@@ -1,6 +1,6 @@
 #define CATCH_CONFIG_MAIN
 
-#include "implementation.cpp"
+#include "implementation.hpp"
 #include "catch.hpp"
 
 #include <vector>
@@ -173,7 +173,7 @@ TEST_CASE("No workers, full store") {
 		store.advanceTo(0);
 		INFO("Client must depart same at the time of arrival when store has enough resources");
 		REQUIRE(store.log.size() == 1);
-		REQUIRE(store.log[0].type == StoreEvent::ClientDepart); // тук трябва да е [1] защото горе вече има един ивент
+		REQUIRE(store.log[0].type == StoreEvent::ClientDepart);
 	}
 
 	SECTION("Multiple clients") {
