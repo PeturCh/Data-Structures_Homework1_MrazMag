@@ -10,8 +10,6 @@ struct MyClient : Client //Structure which inherits Client in order to add some 
 	int schweppes;
 	int maxWaitTime;
     int index;
-	bool hasReservedB = false;
-	bool hasReservedS = false;
 	bool isWaiting = false;
 
 	MyClient(int _arriveMin, int _banana, int _schweppes, int _maxWaitTime, int _index = 0) : arriveMinute(_arriveMin), banana(_banana), schweppes(_schweppes), maxWaitTime(_maxWaitTime)
@@ -142,10 +140,9 @@ struct MyStore : Store
     /// @param minute Minute we have advanced to
     void tryOrderSchweppes(MyClient &c, int &minute)
     {
-        while(c.schweppes > schweppes + (sentForS * 100 - reservedS) && workers - (sentForS + sentForB) > 0 && !c.isWaiting && !c.hasReservedS)
+        while(c.schweppes > schweppes + (sentForS * 100 - reservedS) && workers - (sentForS + sentForB) > 0 && !c.isWaiting)
         {
             sentForS++; //Increasing the number of sent workers for schweppes
-            c.hasReservedS = true; //The client has reserved schweppes
             reservedS += c.schweppes; 
             arrivalMinSchweppes.enqueue(c.arriveMinute + 60); // Adding the expected arrival minute to the queue
             if(isConsole) //checking whether we have to print or update the actionHandler 
@@ -153,33 +150,21 @@ struct MyStore : Store
             else
                 actionHandler->onWorkerSend(c.arriveMinute, ResourceType::schweppes);
         }
-        if (c.schweppes > schweppes && (workers - (sentForS + sentForB) > 0) && !c.hasReservedS) //TODO
-        {
-            reservedS += c.schweppes;
-            c.hasReservedS = true;
-        }
     }
     //Tries to order stock for specific client by checking if it needs to 
     //If there are enough workers and he hasn't ordered yet
     /// @param minute Minute we have advanced to
     void tryOrderBanana(MyClient &c, int minute)
     {
-        while(c.banana > bananas + (sentForB * 100 - reservedB) && workers - (sentForS + sentForB) > 0 && !c.isWaiting && !c.hasReservedB)
+        while(c.banana > bananas + (sentForB * 100 - reservedB) && workers - (sentForS + sentForB) > 0 && !c.isWaiting)
         {
             sentForB++; //Increasing the number of sent workers for banana
             reservedB += c.banana; 
-            c.hasReservedB = true; //The client has reserved schweppes
             arrivalMinBanana.enqueue(c.arriveMinute + 60); // Adding the expected arrival minute to the queue
             if(isConsole) //checking whether we have to print or update the actionHandler 
                 std::cout<<"W " << c.arriveMinute << " banana\n";
             else
                 actionHandler->onWorkerSend(c.arriveMinute, ResourceType::banana);
-        }
-
-        if (c.banana > bananas && workers - (sentForS + sentForB) > 0 && !c.hasReservedB) //TODO
-        {
-            reservedB += c.banana;
-            c.hasReservedB = true;
         }
     }
 
@@ -213,13 +198,7 @@ struct MyStore : Store
     /// @param c The client we have to depart
     /// @param min The minute in which the client will depart
     void clientDeparture(MyClient &c, int min)
-    {   
-        if(c.hasReservedB) // Removing his/hers reserved bananas (if any)
-            reservedB -= c.banana;
-
-        if(c.hasReservedS) // Removing his/hers reserved schweppes (if any)
-            reservedS -= c.schweppes;
-            
+    {       
         if (c.banana >= bananas) // Taking all the bananas if they are not enough 
         {
             c.banana = bananas;
