@@ -19,6 +19,6 @@ int main()
     }
     
     ms.addClients(clients, clientsCount);
-    ms.advanceTo(clients[clientsCount-1].maxWaitTime + clients[clientsCount-1].arriveMinute);
+    ms.advanceTo(clients[clientsCount-1].maxWaitTime + clients[clientsCount-1].arriveMinute + 60);
     delete []clients;
 }
